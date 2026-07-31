@@ -1,0 +1,27 @@
+# Python / FastAPI
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+.env
+
+# Node / React
+node_modules/
+dist/
+build/
+.npm
+*.log
+
+# Databases & Vector Stores
+*.db
+*.sqlite3
+chroma_db/
+.chroma/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
