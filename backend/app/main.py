@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.models.database import engine, Base
-from app.api.v1 import auth, resume, job, interview, admin
+from app.api.v1 import auth, resume, job, interview, admin, learning, chat
 
 # Create Database tables automatically on startup
 Base.metadata.create_all(bind=engine)
@@ -28,6 +28,8 @@ app.include_router(resume.router, prefix=settings.API_V1_STR)
 app.include_router(job.router, prefix=settings.API_V1_STR)
 app.include_router(interview.router, prefix=settings.API_V1_STR)
 app.include_router(admin.router, prefix=settings.API_V1_STR)
+app.include_router(learning.router, prefix=settings.API_V1_STR)
+app.include_router(chat.router, prefix=settings.API_V1_STR)
 
 @app.get("/", tags=["Health"])
 def root():
