@@ -1,17 +1,31 @@
 import uuid
+import logging
 from datetime import datetime, timezone
 from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, ForeignKey, Text, JSON
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+from sqlalchemy.exc import OperationalError
 from app.core.config import settings
+
+logger = logging.getLogger("talentflow.db")
 
 db_url = settings.DATABASE_URL
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
-engine = create_engine(db_url, connect_args=connect_args)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Resilient Database Engine Initialization
+try:
+    connect_args = {"check_same_thread": False} if db_url.startswith("sqlite") else {}
+    engine = create_engine(db_url, connect_args=connect_args, pool_pre_ping=True)
+    # Test connection
+    with engine.connect() as conn:
+        pass
+    logger.info(f"Database connected successfully using: {db_url.split('@')[-1] if '@' in db_url else 'local sqlite'}")
+except Exception as e:
+    logger.warning(f"Failed to connect to primary DATABASE_URL ({e}). Falling back to local SQLite database...")
+    db_url = "sqlite:///./talentflow.db"
+    engine = create_engine(db_url, connect_args={"check_same_thread": False})
 
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def get_db():
