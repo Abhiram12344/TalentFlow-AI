@@ -9,6 +9,7 @@ passlib[bcrypt]>=1.7.4
 bcrypt>=4.0.0
 python-multipart>=0.0.9
 sqlalchemy>=2.0.28
+psycopg2-binary>=2.9.9
 chromadb>=0.4.24
 google-generativeai>=0.4.1
 requests>=2.31.0
