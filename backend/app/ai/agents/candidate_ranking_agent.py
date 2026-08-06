@@ -1,25 +1,26 @@
 import json
+from langchain_core.prompts import ChatPromptTemplate
+from langsmith import traceable
 from app.ai.orchestrator import AIOrchestrator
 
 class CandidateRankingAgent:
-    """Agent 8: Ranks applicants for job openings using semantic vector similarity and explainable rationale."""
+    """LangChain Agent 8: Ranks applicants using vector similarity and explainable rationale."""
     NAME = "Candidate Ranking Agent"
-    ROLE = "Talent Pool Semantic Ranker"
+    ROLE = "LangChain Talent Pool Semantic Ranker"
 
     @classmethod
+    @traceable(name="CandidateRankingAgent.rank_candidate", run_type="llm")
     def rank_candidate(cls, job_requirements: dict, candidate_resume: dict) -> dict:
-        prompt = f"""
-        Role: Principal Recruiting Intelligence Specialist.
-        Job Requirements: {json.dumps(job_requirements)}
-        Candidate Profile: {json.dumps(candidate_resume)}
-
-        Calculate candidate fit score. Return JSON with:
-        - "match_score": float 0-100
-        - "match_reason": string detailed explainable rationale
-        - "key_strengths": list of strings
-        - "potential_gaps": list of strings
-        """
-        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(prompt, task_name="candidate_ranking_agent")
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", "You are a Principal Recruiting Intelligence Specialist."),
+            ("user", "Job Requirements: {reqs}\nCandidate Profile: {cand}\n\nCalculate match. Return JSON with match_score, match_reason, key_strengths, potential_gaps.")
+        ])
+        
+        formatted_prompt = prompt_template.format(
+            reqs=json.dumps(job_requirements),
+            cand=json.dumps(candidate_resume)
+        )
+        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(formatted_prompt, task_name="candidate_ranking_agent")
         try:
             parsed = json.loads(output_text)
         except Exception:
@@ -29,4 +30,4 @@ class CandidateRankingAgent:
                 "key_strengths": ["FastAPI & Microservices", "React & Modern UI", "PostgreSQL Optimization"],
                 "potential_gaps": ["Minor gap in Kubernetes cluster management"]
             }
-        return {"agent_name": cls.NAME, "provider": provider, "latency_ms": latency, "fallback_used": fallback, "data": parsed}
+        return {"agent_name": cls.NAME, "provider": f"LangChain ({provider})", "latency_ms": latency, "fallback_used": fallback, "data": parsed}

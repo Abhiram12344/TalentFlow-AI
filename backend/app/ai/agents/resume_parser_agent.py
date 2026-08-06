@@ -1,29 +1,23 @@
 import json
+from langchain_core.prompts import ChatPromptTemplate
+from langsmith import traceable
 from app.ai.orchestrator import AIOrchestrator
 
 class ResumeParserAgent:
-    """Agent 1: Extracts structured candidate skills, experience timeline, and education from raw resume text."""
+    """LangChain Agent 1: Extracts structured candidate skills, experience timeline, and education."""
     NAME = "Resume Analysis Agent"
-    ROLE = "Candidate Document Extractor"
+    ROLE = "LangChain Candidate Document Extractor"
 
     @classmethod
+    @traceable(name="ResumeParserAgent.parse_resume", run_type="llm")
     def parse_resume(cls, raw_text: str) -> dict:
-        prompt = f"""
-        Role: Senior Talent Analytics Specialist.
-        Task: Extract structured candidate details from the following resume text into JSON format.
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", "You are a Senior Talent Analytics Specialist. Extract structured candidate details into JSON."),
+            ("user", "Extract structured candidate details from the following resume text:\n{resume_text}\n\nReturn JSON with full_name, email, skills (list), experience_years (number), summary, education.")
+        ])
         
-        Resume Text:
-        {raw_text}
-
-        Return a valid JSON object with:
-        - "full_name": candidate name (or "Candidate")
-        - "email": candidate email (or "")
-        - "skills": list of technical & soft skills
-        - "experience_years": estimated number of years (float or int)
-        - "summary": brief professional summary
-        - "education": list of degrees/institutions
-        """
-        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(prompt, task_name="resume_parse_agent")
+        formatted_prompt = prompt_template.format(resume_text=raw_text)
+        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(formatted_prompt, task_name="resume_parser_agent")
         
         try:
             parsed = json.loads(output_text)
@@ -38,7 +32,7 @@ class ResumeParserAgent:
             }
         return {
             "agent_name": cls.NAME,
-            "provider": provider,
+            "provider": f"LangChain ({provider})",
             "latency_ms": latency,
             "fallback_used": fallback,
             "data": parsed

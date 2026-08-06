@@ -169,7 +169,7 @@ export default function App() {
 
       {/* TAB 3: MULTI-AGENT COLLABORATION */}
       {activeTab === 'agents' && (
-        <AgentVisualizer telemetryLogs={telemetryLogs} />
+        <AgentVisualizer telemetryLogs={telemetryLogs} langsmithRunId={atsAuditData?.pipeline_result?.langsmith_run_id} />
       )}
 
       {/* TAB 4: AI CAREER COACH CHAT */}

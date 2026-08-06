@@ -1,37 +1,27 @@
 import json
+from langchain_core.prompts import ChatPromptTemplate
+from langsmith import traceable
 from app.ai.orchestrator import AIOrchestrator
 
 class PracticeTutorAgent:
-    """
-    Agent 5: Socratic Practice Tutor Agent.
-    Explains daily practice problems in simple terms and clarifies candidate doubts WITHOUT giving away the final solution code.
-    """
+    """LangChain Agent 5: Socratic Practice Tutor Agent with strict zero-solution code guardrails."""
     NAME = "Practice Tutor Agent"
-    ROLE = "Socratic Problem Guide & Doubt Resolver"
+    ROLE = "LangChain Socratic Problem Guide & Doubt Resolver"
 
     @classmethod
+    @traceable(name="PracticeTutorAgent.assist_practice", run_type="llm")
     def assist_practice(cls, problem_title: str, problem_description: str, candidate_query: str = "") -> dict:
-        prompt = f"""
-        Role: World-Class Socratic Technical Educator & Mentor.
-        Problem Title: {problem_title}
-        Problem Description/Challenge: {problem_description}
-        Candidate Doubt/Query: {candidate_query or 'Can you explain this problem in simple terms and give me an approach hint?'}
-
-        CRITICAL GUARDRAIL: DO NOT provide the complete final code or direct solution code!
-        Instead:
-        1. Explain the core intuition & real-world analogy in simple, beginner-friendly terms.
-        2. Break down the key constraints and edge cases to watch out for.
-        3. Provide 2-3 progressive Socratic thought hints to guide the candidate toward discovering the optimal approach themselves.
-        4. Suggest time and space complexity targets (e.g., O(N) time, O(1) space).
-
-        Return JSON with:
-        - "simple_explanation": string intuitive breakdown with analogy
-        - "key_constraints_and_edge_cases": list of strings
-        - "socratic_hints": list of progressive hint strings (NO CODE SOLUTION)
-        - "target_complexity": {{"time": string, "space": string}}
-        - "encouraging_guidance": string
-        """
-        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(prompt, task_name="practice_tutor_agent")
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", "You are a World-Class Socratic Technical Educator. STRICT GUARDRAIL: DO NOT provide the complete final code or direct solution code!"),
+            ("user", "Problem Title: {title}\nProblem Description: {desc}\nCandidate Query: {query}\n\nExplain core intuition simply, list key constraints & edge cases, provide 2-3 progressive Socratic thought hints (NO CODE SOLUTION), time/space complexity target, and encouraging guidance.")
+        ])
+        
+        formatted_prompt = prompt_template.format(
+            title=problem_title,
+            desc=problem_description,
+            query=candidate_query or 'Can you explain this problem in simple terms and give me an approach hint?'
+        )
+        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(formatted_prompt, task_name="practice_tutor_agent")
         
         try:
             parsed = json.loads(output_text)
@@ -53,7 +43,7 @@ class PracticeTutorAgent:
             }
         return {
             "agent_name": cls.NAME,
-            "provider": provider,
+            "provider": f"LangChain ({provider})",
             "latency_ms": latency,
             "fallback_used": fallback,
             "data": parsed

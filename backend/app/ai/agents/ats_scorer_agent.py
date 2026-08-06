@@ -1,27 +1,26 @@
 import json
+from langchain_core.prompts import ChatPromptTemplate
+from langsmith import traceable
 from app.ai.orchestrator import AIOrchestrator
 
 class ATSScorerAgent:
-    """Agent 2: Scores ATS compliance, keyword alignment, formatting quality, and improvement fixes."""
+    """LangChain Agent 2: Scores ATS compliance, keyword alignment, formatting quality, and fixes."""
     NAME = "ATS Optimization Agent"
-    ROLE = "ATS Compliance & Resume Auditor"
+    ROLE = "LangChain ATS Compliance & Resume Auditor"
 
     @classmethod
+    @traceable(name="ATSScorerAgent.evaluate_ats", run_type="llm")
     def evaluate_ats(cls, resume_data: dict, target_jd: str = "") -> dict:
-        prompt = f"""
-        Role: Principal HR & ATS Parser Auditor.
-        Candidate Profile: {json.dumps(resume_data)}
-        Target Job Description (Optional): {target_jd or 'General Software & AI Engineering'}
-
-        Perform an exhaustive ATS compliance audit. Return JSON with:
-        - "ats_score": float 0-100
-        - "category_scores": {{"formatting": int, "keyword_match": int, "experience_clarity": int}}
-        - "matching_keywords": list of matched keywords
-        - "missing_keywords": list of critical missing keywords
-        - "formatting_issues": list of formatting flaws
-        - "actionable_improvements": list of prioritized bullet fixes
-        """
-        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(prompt, task_name="ats_scorer_agent")
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", "You are a Principal HR & ATS Auditor. Audit the resume for ATS formatting and keyword alignment."),
+            ("user", "Candidate Profile: {profile}\nTarget Job Description: {target_jd}\n\nReturn JSON with ats_score (0-100), category_scores, matching_keywords, missing_keywords, formatting_issues, actionable_improvements.")
+        ])
+        
+        formatted_prompt = prompt_template.format(
+            profile=json.dumps(resume_data),
+            target_jd=target_jd or 'General Software & AI Engineering'
+        )
+        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(formatted_prompt, task_name="ats_scorer_agent")
         
         try:
             parsed = json.loads(output_text)
@@ -39,7 +38,7 @@ class ATSScorerAgent:
             }
         return {
             "agent_name": cls.NAME,
-            "provider": provider,
+            "provider": f"LangChain ({provider})",
             "latency_ms": latency,
             "fallback_used": fallback,
             "data": parsed

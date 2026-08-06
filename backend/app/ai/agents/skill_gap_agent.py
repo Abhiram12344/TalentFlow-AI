@@ -1,25 +1,26 @@
 import json
+from langchain_core.prompts import ChatPromptTemplate
+from langsmith import traceable
 from app.ai.orchestrator import AIOrchestrator
 
 class SkillGapAgent:
-    """Agent 3: Identifies skill gaps by comparing candidate skills against industry benchmark roles."""
+    """LangChain Agent 3: Identifies competency gaps against benchmark roles."""
     NAME = "Skill Gap Agent"
-    ROLE = "Competency Gap & Readiness Evaluator"
+    ROLE = "LangChain Competency Gap & Readiness Evaluator"
 
     @classmethod
+    @traceable(name="SkillGapAgent.analyze_gaps", run_type="llm")
     def analyze_gaps(cls, current_skills: list, target_role: str) -> dict:
-        prompt = f"""
-        Role: Senior Competency Benchmarking Strategist.
-        Current Skills: {current_skills}
-        Target Role: {target_role}
-
-        Analyze competency gaps for this target role. Return JSON with:
-        - "readiness_score": float 0-100
-        - "mastered_skills": list of candidate skills that align with target role
-        - "gap_skills": list of priority missing skills
-        - "skill_category_gaps": {{"core_cs": list, "frameworks": list, "system_design": list}}
-        """
-        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(prompt, task_name="skill_gap_agent")
+        prompt_template = ChatPromptTemplate.from_messages([
+            ("system", "You are a Senior Competency Benchmarking Strategist."),
+            ("user", "Current Skills: {skills}\nTarget Role: {target_role}\n\nReturn JSON with readiness_score (0-100), mastered_skills, gap_skills, skill_category_gaps.")
+        ])
+        
+        formatted_prompt = prompt_template.format(
+            skills=", ".join(current_skills),
+            target_role=target_role
+        )
+        output_text, provider, latency, fallback = AIOrchestrator.generate_completion(formatted_prompt, task_name="skill_gap_agent")
         
         try:
             parsed = json.loads(output_text)
@@ -36,7 +37,7 @@ class SkillGapAgent:
             }
         return {
             "agent_name": cls.NAME,
-            "provider": provider,
+            "provider": f"LangChain ({provider})",
             "latency_ms": latency,
             "fallback_used": fallback,
             "data": parsed
