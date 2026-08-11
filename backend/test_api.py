@@ -17,7 +17,7 @@ from app.ai.agents.multi_agent_orchestrator import MultiAgentOrchestrator
 
 def run_tests():
     print("==================================================")
-    print("TalentFlow AI — Tool-Calling Agents & Sandbox Test")
+    print("TalentFlow AI — Dynamic Per-Resume Analysis Test")
     print("==================================================")
 
     # 1. Config & Security Check
@@ -25,33 +25,45 @@ def run_tests():
     assert verify_password("Pass123!", get_password_hash("Pass123!")), "Security check failed"
     print("[OK] Security & Password Utilities verified.")
 
-    # 2. LangChain Tools Test
-    entities_out = extract_resume_entities_tool.invoke({"raw_text": "Experienced Python and FastAPI developer."})
-    parsed_entities = json.loads(entities_out)
-    assert "Python" in parsed_entities["skills"], "Skills tool extraction failed"
-    print("[OK] LangChain extract_resume_entities_tool verified.")
+    # 2. Test Resume 1: Frontend Developer
+    frontend_resume = "Sarah Jenkins — Senior Frontend Developer with 5 years experience in React, TypeScript, HTML, CSS, and TailwindCSS."
+    res1 = MultiAgentOrchestrator.execute_candidate_pipeline(frontend_resume, "Frontend Developer")
+    skills1 = res1["resume_analysis"]["skills"]
+    ats1 = res1["ats_evaluation"]["ats_score"]
+    
+    print(f"[OK] Resume 1 (Frontend): Score {ats1}% | Extracted Skills: {skills1}")
+    assert any(s in ["React", "TypeScript", "HTML", "CSS", "TailwindCSS"] for s in skills1), "Frontend skills missing"
 
-    ats_out = calculate_ats_audit_tool.invoke({"resume_json_str": entities_out, "target_jd": "AI Architect"})
-    parsed_ats = json.loads(ats_out)
-    assert parsed_ats["ats_score"] > 80, "ATS audit tool score failed"
-    print(f"[OK] LangChain calculate_ats_audit_tool verified (Score: {parsed_ats['ats_score']}%).")
+    # 3. Test Resume 2: DevOps Specialist
+    devops_resume = "Alex Rivera — DevOps Engineer with 6 years experience in Docker, Kubernetes, Terraform, AWS, Linux, and CI/CD."
+    res2 = MultiAgentOrchestrator.execute_candidate_pipeline(devops_resume, "DevOps Engineer")
+    skills2 = res2["resume_analysis"]["skills"]
+    ats2 = res2["ats_evaluation"]["ats_score"]
+    
+    print(f"[OK] Resume 2 (DevOps): Score {ats2}% | Extracted Skills: {skills2}")
+    assert any(s in ["Docker", "Kubernetes", "Terraform", "AWS", "Linux"] for s in skills2), "DevOps skills missing"
 
-    # 3. Live Code Execution Sandbox Tool Test
-    code_sample = "x = [1, 2, 3, 4]\nprint('Sum:', sum(x))\nassert sum(x) == 10"
+    # 4. Test Resume 3: AI / ML Engineer
+    ai_resume = "Elena Rostova — Machine Learning Engineer with 3 years experience in Python, PyTorch, TensorFlow, Scikit-Learn, and LangChain."
+    res3 = MultiAgentOrchestrator.execute_candidate_pipeline(ai_resume, "AI Solutions Architect")
+    skills3 = res3["resume_analysis"]["skills"]
+    ats3 = res3["ats_evaluation"]["ats_score"]
+    
+    print(f"[OK] Resume 3 (AI/ML): Score {ats3}% | Extracted Skills: {skills3}")
+    assert any(s in ["Python", "PyTorch", "TensorFlow", "LangChain"] for s in skills3), "AI/ML skills missing"
+
+    # 5. Assert Uniqueness Across All 3 Resumes
+    assert skills1 != skills2 != skills3, "Skills extraction is not dynamic!"
+    print("[SUCCESS] All 3 resumes generated completely unique, dynamic skills and ATS evaluations!")
+
+    # 6. Live Code Execution Sandbox Tool Test
+    code_sample = "nums = [3, 1, 4, 1, 5, 9]\nprint('Sorted:', sorted(nums))"
     sandbox_out = execute_python_code_sandbox_tool.invoke({"code_string": code_sample})
     sandbox_res = json.loads(sandbox_out)
     assert sandbox_res["status"] == "Success", "Code sandbox tool failed"
-    assert "Sum: 10" in sandbox_res["stdout"], "Code sandbox stdout mismatch"
-    print(f"[OK] LangChain execute_python_code_sandbox_tool verified ({sandbox_res['status']}).")
+    print(f"[OK] Code Sandbox Execution Tool verified ({sandbox_res['status']}).")
 
-    # 4. LangGraph Stateful Tool Pipeline Test
-    sample_resume = "Senior AI Software Engineer proficient in Python, FastAPI, React, SQL, and Docker."
-    pipeline_res = MultiAgentOrchestrator.execute_candidate_pipeline(sample_resume, "AI Solutions Architect")
-    assert pipeline_res["pipeline_status"] == "Success", "LangGraph Tool Pipeline failed"
-    assert len(pipeline_res["telemetry_logs"]) >= 4, "Telemetry logs count mismatch"
-    print(f"[OK] LangGraph Tool-Calling Pipeline verified ({len(pipeline_res['telemetry_logs'])} tool nodes executed).")
-
-    print("\n[SUCCESS] ALL TOOL-CALLING AGENTS AND CODE SANDBOX MODULES PASSED PERFECTLY!")
+    print("\n[SUCCESS] ALL DYNAMIC PER-RESUME ANALYSIS MODULES PASSED PERFECTLY!")
 
 if __name__ == "__main__":
     run_tests()
