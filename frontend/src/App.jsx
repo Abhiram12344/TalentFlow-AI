@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 import ResumeUploadDropzone from './components/ResumeUploadDropzone';
-import ProfessionalLearningPath from './components/ProfessionalLearningPath';
+import HierarchicalLearningPlatform from './components/HierarchicalLearningPlatform';
 import AgentVisualizer from './components/AgentVisualizer';
 import AICareerChat from './components/AICareerChat';
 
@@ -88,7 +88,7 @@ export default function App() {
           className={`nav-tab ${activeTab === 'learning' ? 'active' : ''}`}
           onClick={() => setActiveTab('learning')}
         >
-          <Compass size={18} style={{ display: 'inline', marginRight: '6px' }} /> Learning Paths & Daily Planner
+          <Compass size={18} style={{ display: 'inline', marginRight: '6px' }} /> Course Syllabi & Code Sandbox
         </button>
 
         <button 
@@ -162,9 +162,9 @@ export default function App() {
         </div>
       )}
 
-      {/* TAB 2: PROFESSIONAL LEARNING PATHS & DAILY PLANNER */}
+      {/* TAB 2: COURSE SYLLABI & EMBEDDED CODE SANDBOX */}
       {activeTab === 'learning' && (
-        <ProfessionalLearningPath apiBase={API_BASE} />
+        <HierarchicalLearningPlatform apiBase={API_BASE} />
       )}
 
       {/* TAB 3: MULTI-AGENT COLLABORATION */}

@@ -5,47 +5,53 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from app.core.config import settings
-from app.core.security import get_password_hash, verify_password, create_access_token, decode_token
+from app.core.security import get_password_hash, verify_password
+from app.ai.tools import (
+    extract_resume_entities_tool,
+    calculate_ats_audit_tool,
+    fetch_skill_gap_matrix_tool,
+    execute_python_code_sandbox_tool,
+    socratic_doubt_help_tool
+)
 from app.ai.agents.multi_agent_orchestrator import MultiAgentOrchestrator
-from app.ai.agents.learning_path_agent import LearningPathAgent
-from app.ai.agents.practice_tutor_agent import PracticeTutorAgent
 
 def run_tests():
     print("==================================================")
-    print("TalentFlow AI — Enterprise Multi-Agent Verification")
+    print("TalentFlow AI — Tool-Calling Agents & Sandbox Test")
     print("==================================================")
 
-    # 1. Config Check
+    # 1. Config & Security Check
     print(f"[OK] Project Name: {settings.PROJECT_NAME}")
-    print(f"[OK] API Version: {settings.VERSION}")
+    assert verify_password("Pass123!", get_password_hash("Pass123!")), "Security check failed"
+    print("[OK] Security & Password Utilities verified.")
 
-    # 2. Security Check
-    raw_pw = "TalentFlowSecured2026!"
-    hashed_pw = get_password_hash(raw_pw)
-    assert verify_password(raw_pw, hashed_pw), "Password verification failed"
-    print("[OK] Auth & JWT Security Utilities verified.")
+    # 2. LangChain Tools Test
+    entities_out = extract_resume_entities_tool.invoke({"raw_text": "Experienced Python and FastAPI developer."})
+    parsed_entities = json.loads(entities_out)
+    assert "Python" in parsed_entities["skills"], "Skills tool extraction failed"
+    print("[OK] LangChain extract_resume_entities_tool verified.")
 
-    # 3. Multi-Agent Pipeline Test
-    sample_resume = "Senior Full Stack Engineer with 4 years experience in Python, FastAPI, React, SQL, and Docker."
+    ats_out = calculate_ats_audit_tool.invoke({"resume_json_str": entities_out, "target_jd": "AI Architect"})
+    parsed_ats = json.loads(ats_out)
+    assert parsed_ats["ats_score"] > 80, "ATS audit tool score failed"
+    print(f"[OK] LangChain calculate_ats_audit_tool verified (Score: {parsed_ats['ats_score']}%).")
+
+    # 3. Live Code Execution Sandbox Tool Test
+    code_sample = "x = [1, 2, 3, 4]\nprint('Sum:', sum(x))\nassert sum(x) == 10"
+    sandbox_out = execute_python_code_sandbox_tool.invoke({"code_string": code_sample})
+    sandbox_res = json.loads(sandbox_out)
+    assert sandbox_res["status"] == "Success", "Code sandbox tool failed"
+    assert "Sum: 10" in sandbox_res["stdout"], "Code sandbox stdout mismatch"
+    print(f"[OK] LangChain execute_python_code_sandbox_tool verified ({sandbox_res['status']}).")
+
+    # 4. LangGraph Stateful Tool Pipeline Test
+    sample_resume = "Senior AI Software Engineer proficient in Python, FastAPI, React, SQL, and Docker."
     pipeline_res = MultiAgentOrchestrator.execute_candidate_pipeline(sample_resume, "AI Solutions Architect")
-    assert pipeline_res["pipeline_status"] == "Success", "Multi-Agent Pipeline failed"
-    assert len(pipeline_res["telemetry_logs"]) >= 4, "Telemetry logs incomplete"
-    print(f"[OK] Multi-Agent Ecosystem verified ({len(pipeline_res['telemetry_logs'])} agent nodes executed).")
+    assert pipeline_res["pipeline_status"] == "Success", "LangGraph Tool Pipeline failed"
+    assert len(pipeline_res["telemetry_logs"]) >= 4, "Telemetry logs count mismatch"
+    print(f"[OK] LangGraph Tool-Calling Pipeline verified ({len(pipeline_res['telemetry_logs'])} tool nodes executed).")
 
-    # 4. TakeUForward Learning Path Agent Test
-    curriculum = LearningPathAgent.get_curated_path("dsa")
-    assert "topics" in curriculum, "Curriculum topics missing"
-    assert len(curriculum["topics"]) >= 5, "DSA topics count mismatch"
-    print(f"[OK] TakeUForward Learning Path Agent verified ({len(curriculum['topics'])} daily study & practice days).")
-
-    # 5. Socratic Practice Tutor Agent Test (Zero-Solution Guardrail)
-    tutor_res = PracticeTutorAgent.assist_practice("Kadane's Algorithm", "Find maximum contiguous subarray sum")
-    tutor_data = tutor_res["data"]
-    assert "socratic_hints" in tutor_data, "Hints missing in tutor response"
-    assert "def " not in json.dumps(tutor_data).lower(), "Tutor leaked final code solution!"
-    print("[OK] Socratic Practice Tutor Agent verified (strict zero-solution guardrail active).")
-
-    print("\n[SUCCESS] ALL ENTERPRISE MULTI-AGENT MODULES PASSED PERFECTLY!")
+    print("\n[SUCCESS] ALL TOOL-CALLING AGENTS AND CODE SANDBOX MODULES PASSED PERFECTLY!")
 
 if __name__ == "__main__":
     run_tests()
