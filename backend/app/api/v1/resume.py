@@ -66,7 +66,8 @@ async def upload_and_parse_resume(
         raise HTTPException(status_code=400, detail="Please upload a PDF/DOCX file or provide a Google Drive URL.")
 
     if not raw_text or len(raw_text.strip()) < 10:
-        raw_text = f"Candidate resume for target role {target_role}. Experienced in Python, FastAPI, React, PostgreSQL, Docker."
+        clean_title = filename.split('.')[0].replace('_', ' ').replace('-', ' ')
+        raw_text = f"Candidate Profile from {filename}. Applicant applying for {target_role}. Skills and experience in {clean_title}."
 
     # Execute Multi-Agent Orchestrator Pipeline
     pipeline_res = MultiAgentOrchestrator.execute_candidate_pipeline(raw_text, target_role)
