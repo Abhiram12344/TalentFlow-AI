@@ -1,4 +1,5 @@
 import io
+import re
 import requests
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -8,18 +9,45 @@ from app.ai.agents.multi_agent_orchestrator import MultiAgentOrchestrator
 
 router = APIRouter(prefix="/resumes", tags=["Resumes & ATS File Upload"])
 
+def extract_pdf_stream_text(content_bytes: bytes) -> str:
+    """Multi-Strategy PDF Stream Parser: Extracts text streams directly from uncompressed PDF bytes."""
+    extracted = []
+    try:
+        raw_str = content_bytes.decode('latin1', errors='ignore')
+        # Strategy A: Extract PDF Tj / TJ text operator parenthetical strings
+        operators = re.findall(r'\(([^()]{2,100})\)\s*T[jJ]', raw_str)
+        if operators:
+            extracted.extend(operators)
+            
+        # Strategy B: Extract standalone word tokens from PDF stream
+        words = re.findall(r'[a-zA-Z]{3,30}', raw_str)
+        if words:
+            # Filter common PDF keywords
+            pdf_noise = {'pdf', 'endobj', 'obj', 'stream', 'endstream', 'xref', 'trailer', 'startxref', 'catalog', 'pages', 'page', 'font'}
+            filtered_words = [w for w in words if w.lower() not in pdf_noise]
+            extracted.extend(filtered_words[:60])
+    except Exception:
+        pass
+
+    return " ".join(extracted)
+
 def extract_text_from_file(filename: str, content_bytes: bytes) -> str:
     ext = filename.lower().split('.')[-1] if '.' in filename else ''
+    extracted_text = ""
     
     if ext == 'pdf':
         try:
             import pypdf
             reader = pypdf.PdfReader(io.BytesIO(content_bytes))
             text = "\n".join([page.extract_text() or '' for page in reader.pages])
-            if text.strip():
-                return text.strip()
-        except Exception as e:
+            if text.strip() and len(text.strip()) > 30:
+                extracted_text = text.strip()
+        except Exception:
             pass
+
+        if not extracted_text:
+            # Multi-Strategy Stream Extractor
+            extracted_text = extract_pdf_stream_text(content_bytes)
 
     if ext in ['docx', 'doc']:
         try:
@@ -27,15 +55,22 @@ def extract_text_from_file(filename: str, content_bytes: bytes) -> str:
             doc = docx.Document(io.BytesIO(content_bytes))
             text = "\n".join([p.text for p in doc.paragraphs if p.text])
             if text.strip():
-                return text.strip()
-        except Exception as e:
+                extracted_text = text.strip()
+        except Exception:
             pass
 
-    # Fallback to UTF-8 plain text decoding
-    try:
-        return content_bytes.decode('utf-8', errors='ignore')
-    except Exception:
-        return f"Document content for {filename}"
+    if not extracted_text:
+        try:
+            extracted_text = content_bytes.decode('utf-8', errors='ignore')
+        except Exception:
+            extracted_text = f"Document content for {filename}"
+
+    # Tokenize filename (e.g. Abhiram_Resume_Eidiko_TraineeSWE.pdf)
+    clean_title = filename.split('.')[0].replace('_', ' ').replace('-', ' ')
+    tokens = clean_title.split()
+    candidate_name = tokens[0] if tokens else "Candidate"
+
+    return f"Candidate Name: {candidate_name}. Resume Document: {filename}. Role Info: {clean_title}.\n{extracted_text}"
 
 @router.post("/upload")
 async def upload_and_parse_resume(

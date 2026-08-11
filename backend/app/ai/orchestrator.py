@@ -110,15 +110,21 @@ class AIOrchestrator:
 
             # Role Benchmark
             role_benchmarks = {
-                "ai": ["Python", "FastAPI", "PyTorch", "LangChain", "Vector Embeddings", "Docker"],
-                "devops": ["Docker", "Kubernetes", "Terraform", "AWS", "Linux", "CI/CD"],
-                "frontend": ["JavaScript", "TypeScript", "React", "HTML", "CSS", "TailwindCSS"],
-                "backend": ["Python", "Java", "Go", "PostgreSQL", "MySQL", "Redis", "REST APIs", "System Design"]
+                "ai": ["Python", "FastAPI", "PyTorch", "LangChain", "Vector Embeddings", "System Design", "Docker", "PostgreSQL", "REST APIs"],
+                "trainee": ["Java", "Python", "C++", "Data Structures", "Algorithms", "SQL", "OOP", "Git", "Operating Systems", "Software Engineering"],
+                "swe": ["Java", "Python", "C++", "Data Structures", "Algorithms", "SQL", "OOP", "Git", "Operating Systems", "Software Engineering"],
+                "devops": ["Docker", "Kubernetes", "Terraform", "AWS", "Linux", "CI/CD", "Git", "Ansible", "Bash"],
+                "cloud": ["AWS", "Azure", "GCP", "Terraform", "Docker", "Kubernetes", "Linux", "CI/CD", "Networking"],
+                "frontend": ["JavaScript", "TypeScript", "React", "HTML", "CSS", "TailwindCSS", "Redux", "Next.js", "REST APIs"],
+                "backend": ["Python", "Java", "Go", "PostgreSQL", "MySQL", "Redis", "REST APIs", "System Design", "Microservices", "Spring Boot"],
+                "mobile": ["React Native", "Flutter", "Swift", "Kotlin", "iOS", "Android", "REST APIs"],
+                "data": ["Python", "SQL", "PostgreSQL", "PyTorch", "TensorFlow", "Scikit-Learn", "Pandas", "Spark", "Kafka"]
             }
             
             benchmark = role_benchmarks["backend"]
             for r_key, r_list in role_benchmarks.items():
-                if r_key in text_lower:
+                pattern = r'\b' + re.escape(r_key) + r'\b'
+                if re.search(pattern, text_lower):
                     benchmark = r_list
                     break
                     
